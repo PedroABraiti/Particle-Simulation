@@ -14,6 +14,8 @@ Uma simulação interativa de partículas em 2D, demonstrando movimento, colisõ
 
 ➥ *Visualização em Tempo Real: Mostre a evolução da simulação em tempo real, permitindo que os usuários observem comportamentos dinâmicos.*
 
+__________________________________________________________________________________________________________________________________________________
+
 **TECNOLOGIAS UTILIZADAS:**
 
 ➦ *JavaScript: Linguagem de programação utilizada.*
