@@ -19,3 +19,5 @@ ________________________________________________________________________________
 **TECNOLOGIAS UTILIZADAS:**
 
 ➦ *JavaScript: Linguagem de programação utilizada.*
+
+➦ *p5.js*
