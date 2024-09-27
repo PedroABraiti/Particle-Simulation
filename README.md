@@ -27,6 +27,7 @@ ________________________________________________________________________________
 **COMO JOGAR:**
 
 ➥ *Como o desenvolvimento deste projeto ainda esta em andamento, não existe um menu no jogo para que o usuario possa escolher o elemento que ira usar, porntanto trago abaixo uma descrição do projeto.*
+➥ primeiramente clique em 'index.html' com o botão direito do mouse e selecione 'open with live server', então abra a aba criada no navegador e divirta-se.
 
 ➛ Click direito do mouse sobre o canva faz com que as particulas surjam.
 
