@@ -21,3 +21,24 @@ ________________________________________________________________________________
 ➦ *JavaScript: Linguagem de programação utilizada.*
 
 ➦ *p5.js*
+
+__________________________________________________________________________________________________________________________________________________
+
+**COMO JOGAR:**
+
+➥ *Como o desenvolvimento deste projeto ainda esta em andamento, não existe um menu no jogo para que o usuario possa escolher o elemento que ira usar, porntanto trago abaixo uma descrição do projeto.*
+
+➛ Click direito do mouse sobre o canva faz com que as particulas surjam.
+
+➛ scroll do mouse para cima aumenta a area de surgimento em volta do mouse, assim como o scroll para baixo diminui esta area.
+
+➛ botão do scroll serve como 'delete' para os elementos.
+
+➛ os elementos são selecionados através dos numeros do teclado, sendo:
+
+1 - Areia (tende a ficar em estado de repouso em forma piramidal)
+2 - Água (tende a ficar nivelada)
+3 - Ácido (elimina outros pixels)
+4 - Madeira (Não é afetada pela gravidade, inflamável)
+5 - Gás ('flutua', extremamente inflamável)
+6 - Fogo (tende a subir)
