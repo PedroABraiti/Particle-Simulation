@@ -10,36 +10,44 @@ function make2DArray(cols, rows) {
 }
 
 //A FAZER
-//stone, oil, waterVapor, ice;
+//stone, oil, waterVapor, ice, clone;
 //agua apaga fogo -> ambos somem e no lugar da agua vira vapor
 
 let grid;
 let w = 4; //pixel size
+let width = 400 * w/2;
+let hight = 300 * w/2;
 let cols, rows;
 
 let hueValue;
+let materialMenu = false;
+let savedPause = false;
 
 //Materials
 let notTangible = [0];
-let isLiquid = [220];
+let isWater = [220];
 let isAcid = [120];
-let isSandy = [40, 50, 60];
+let isSand = [40, 50, 60];
 let isWood = [15, 18, 21];
 let isGas = [35];
-let isFire = [10, 20, 30]
+let isFire = [13, 25, 30]
+let isBurning = [5, 10]
 
 //Behavior of materials
-let isSinkable = [...isSandy];
-let isFlamable = [[...isWood, 30], [...isGas, 80],[...isSandy, 30]]; //material + chance of getting on fire
-let isFragile = [...isWood, ...isGas, ...isSandy, ...isLiquid];
+let isSinkable = [...isSand];
+let isFlamable = [[...isWood, 20], [...isGas, 80], [...isSand, 30]]; //material + chance of getting on fire
+let isFragile = [...isWood, ...isGas, ...isSand, ...isWater];
+let isFuelStatic = [...isWood];
+let isFuelLiquid = []; //oil
 
 let materialsList = [
-  isSandy,
-  isLiquid,
+  isSand,
+  isWater,
   isAcid,
   isWood,
   isGas,
-  isFire
+  isFire,
+  isBurning
 ];
 
 let materialID = 0; // Mova a declaração para fora da função para manter o estado
@@ -49,7 +57,7 @@ let size = 1;
 let mouseHolded = false;
 
 function setup() {
-  createCanvas(400*2, 300*2);
+  createCanvas(width, hight);
   colorMode(HSB, 360, 255, 255); // hue, saturation, brightness
   cols = width / w;
   rows = height / w;
@@ -74,14 +82,67 @@ function mouseReleased(){
 }
 
 function keyPressed() {
-  if (key === ' ') {
-    isPaused = !isPaused; // Alterna entre pausado e não pausado
+  if (key === ' ' && !materialMenu) {
+    if (!materialMenu){
+      isPaused = !isPaused; // Alterna entre pausado e não pausado
+    }
   }
   if (key >= '1' && key <= materialsList.length) {
     materialID = int(key) - 1; // Converte a tecla para um índice (0, 1, 2)
     chosenMaterial = materialsList[materialID]; // Atualiza o material escolhido
   }
+  if (key === 'Escape') {
+    if (materialMenu){
+      materialMenu = false; // Alterna o estado de pausa
+      isPaused = savedPause;
+    }
+    else{
+      savedPause = isPaused;
+      materialMenu = true;
+      isPaused = true;
+    }
+  }
 }
+
+// Função para desenhar o menu de pausa
+function drawPauseMenu() {
+  fill(0, 150); // Cor de fundo semi-transparente
+  rect(0, 0, width, height); // Desenha um retângulo cobrindo a tela
+
+  fill(255); // Cor do texto
+  textSize(32);
+  textAlign(CENTER, CENTER);
+  text("Pausado", width / 2, height / 2 - 20);
+  textSize(16);
+  text("Pressione Esc para continuar", width / 2, height / 2 + 20);
+
+  // Adicionando os quadrados
+  let cols = 6; // Número de colunas
+  let rows = 3; // Número de linhas
+  let squareSize = 12 * w; // Tamanho dos quadrados
+  let spacing = 20 * w; // Espaçamento entre os quadrados
+
+  // Calcular a largura total e a altura total da grade
+  let totalWidth = cols * squareSize + (cols - 1) * spacing;
+  let totalHeight = rows * squareSize + (rows - 1) * spacing;
+
+  // Calcular a posição inicial para centralizar a grade
+  let startX = (width - totalWidth) / 2;
+
+  // Ajustar startY para centralizar a linha do meio
+  let startY = (height - totalHeight) / 2 + (rows % 2 === 0 ? -squareSize / 2 : 0);
+
+  // Desenhar os quadrados
+  for (let i = 0; i < cols; i++) {
+    for (let j = 0; j < rows; j++) {
+      let x = startX + i * (squareSize + spacing);
+      let y = startY + j * (squareSize + spacing);
+      rect(x, y, squareSize, squareSize); // Desenhar quadrado
+    }
+  }
+}
+
+
 
 let fps = 60; // Desired FPS
 let isPaused = false;
@@ -94,7 +155,7 @@ function draw() {
   // Se estiver pausado, ainda desenhe o grid
   background(0);
 
-  if (mouseHolded) {
+  if (mouseHolded && !materialMenu) {
     let mouseCol = floor(mouseX / w);
     let mouseRow = floor(mouseY / w);
   
@@ -153,6 +214,10 @@ function draw() {
     }
   }
 
+  if (materialMenu){
+    drawPauseMenu();
+  }
+
   if (!isPaused) {
     // Atualiza a lógica do jogo apenas quando não está pausado
     if (currentTime - lastFrameTime >= frameTime) {
@@ -198,7 +263,7 @@ function draw() {
               }
             }
             //SAND
-            if (isSandy.includes(state)) { // Movimento de sólidos (areia)
+            if (isSand.includes(state)) { // Movimento de sólidos (areia)
               if (notTangible.includes(below) && j < rows - 1) {
                 possibleMoves.push([i, j + 1]);
               }
@@ -209,13 +274,13 @@ function draw() {
                 possibleMoves.push([i - 1, j + 1]);
               }
               if (possibleMoves.length === 0) {
-                if (isLiquid.includes(below) && j < rows - 1) {
+                if (isWater.includes(below) && j < rows - 1) {
                   possibleMoves.push([i, j + 1]);
                 }
-                if (isLiquid.includes(belowR)) {
+                if (isWater.includes(belowR)) {
                   possibleMoves.push([i + 1, j + 1]);
                 }
-                if (isLiquid.includes(belowL)) {
+                if (isWater.includes(belowL)) {
                   possibleMoves.push([i - 1, j + 1]);
                 }
                 if (possibleMoves.length === 0){
@@ -245,7 +310,7 @@ function draw() {
               }
             } 
             //LIQUID
-            else if (isLiquid.includes(state)) { // Movimento de líquidos (água)
+            else if (isWater.includes(state)) { // Movimento de líquidos (água)
               if (notTangible.includes(below) && j < rows - 1) {
                 possibleMoves.push([i, j + 1]);
               }
@@ -397,7 +462,7 @@ function draw() {
                 if (notTangible.includes(moveL)) {
                   possibleMoves.push([i - 1, j]);
                 }
-                if (notTangible.includes(below)) {
+                if (notTangible.includes(below) && j < cols - 1) {
                   possibleMoves.push([i, j + 1]);
                 }
 
@@ -448,7 +513,15 @@ function draw() {
                   });
             
                   // Checar se o fogo deve se propagar
-                  if (int(random(1, 101)) <= flameChance) {
+                  if (int(random(1, 101)) <= flameChance && isFuelStatic.includes(nextGrid[newI][newJ])) {
+                    nextGrid[newI][newJ] = random(isBurning); // Propaga o fogo
+                    isUpdated.add(`${newI},${newJ}`);
+                  }
+                  else if (int(random(1, 101)) <= flameChance && isFuelLiquid.includes(nextGrid[newI][newJ])) {
+                    nextGrid[newI][newJ] = random(isFire); // no lugar de isFire colocar a particula FuelLiquid
+                    isUpdated.add(`${newI},${newJ}`);
+                  }
+                  else if (int(random(1, 101)) <= flameChance) {
                     nextGrid[newI][newJ] = random(isFire); // Propaga o fogo
                     isUpdated.add(`${newI},${newJ}`);
                   }
@@ -486,6 +559,48 @@ function draw() {
                 }
               }
               isUpdated.add(`${i},${j}`); // Adiciona a célula atual
+            }
+            //BURNING PARTICLE
+            else if (isBurning.includes(state)){
+              let dieChance = 33; // chance in % of particle to die
+              if (int(random(1, 101)) <= dieChance) {
+                nextGrid[i][j] = random(isFire);
+              }
+              else{
+                if (notTangible.includes(above) && j > 0) {
+                  possibleMoves.push([i, j - 1]);
+                }
+                if (notTangible.includes(aboveR)) {
+                  possibleMoves.push([i + 1, j - 1]);
+                }
+                if (notTangible.includes(aboveL)) {
+                  possibleMoves.push([i - 1, j - 1]);
+                }
+                if (notTangible.includes(moveR)) {
+                  possibleMoves.push([i + 1, j]);
+                }
+                if (notTangible.includes(moveL)) {
+                  possibleMoves.push([i - 1, j]);
+                }
+                if (notTangible.includes(below) && j < cols - 1){
+                  possibleMoves.push([i, j + 1]);
+                }
+                if (notTangible.includes(belowR) && j < cols - 1){
+                  possibleMoves.push([i + 1, j + 1]);
+                }
+                if (notTangible.includes(belowL) && j < cols - 1){
+                  possibleMoves.push([i - 1, j + 1]);
+                }
+                if (possibleMoves.length > 0) {
+                  let rn = Math.floor(Math.random() * possibleMoves.length);
+                  let [newI, newJ] = possibleMoves[rn];
+                  nextGrid[newI][newJ] = random(isFire);
+                  isUpdated.add(`${newI},${newJ}`);
+                  isUpdated.add(`${i},${j}`);
+                } else {
+                  isUpdated.add(`${i},${j}`);
+                }
+              }
             }
             
           }
