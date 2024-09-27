@@ -37,8 +37,13 @@ ________________________________________________________________________________
 ➛ os elementos são selecionados através dos numeros do teclado, sendo:
 
 1 - Areia (tende a ficar em estado de repouso em forma piramidal)
+
 2 - Água (tende a ficar nivelada)
+
 3 - Ácido (elimina outros pixels)
+
 4 - Madeira (Não é afetada pela gravidade, inflamável)
+
 5 - Gás ('flutua', extremamente inflamável)
+
 6 - Fogo (tende a subir)
