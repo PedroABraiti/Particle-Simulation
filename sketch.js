@@ -15,8 +15,8 @@ function make2DArray(cols, rows) {
 
 let grid;
 let w = 4; //pixel size
-let width = 400 * w/2;
-let hight = 300 * w/2;
+let width = 400*w;
+let hight = 200*w;
 let cols, rows;
 
 let hueValue;
@@ -35,7 +35,7 @@ let isBurning = [5, 10]
 
 //Behavior of materials
 let isSinkable = [...isSand];
-let isFlamable = [[...isWood, 20], [...isGas, 80], [...isSand, 30]]; //material + chance of getting on fire
+let isFlamable = [[...isWood, 20], [...isGas, 80]]; //material + chance of getting on fire
 let isFragile = [...isWood, ...isGas, ...isSand, ...isWater];
 let isFuelStatic = [...isWood];
 let isFuelLiquid = []; //oil
@@ -149,6 +149,8 @@ let isPaused = false;
 let frameTime = 1000 / fps; // Time per frame in milliseconds
 let lastFrameTime = 0;
 
+let isInactive = new Set();
+
 function draw() {
   let currentTime = millis();
 
@@ -242,370 +244,416 @@ function draw() {
           let possibleMoves = []; // Inicializa possibleMoves como um array vazio
           let possibleCorosion = [];
           let possibleFire = [];
-
-          if (!isUpdated.has(`${i},${j}`)){ //só passa pelas celulas da grid que ainda não sofreram update nesse frame
-            if (i > 0) {
-              moveL = grid[i - 1][j];
-              if (j < rows - 1) {
-                belowL = grid[i - 1][j + 1];
+          
+          if (!isInactive.has(`${i},${j}`)){
+            if (!isUpdated.has(`${i},${j}`)){ //só passa pelas celulas da grid que ainda não sofreram update nesse frame
+              if (i > 0) {
+                moveL = grid[i - 1][j];
+                if (j < rows - 1) {
+                  belowL = grid[i - 1][j + 1];
+                }
+                if (j > 0) {
+                  aboveL = grid[i - 1][j - 1];
+                }
               }
-              if (j > 0) {
-                aboveL = grid[i - 1][j - 1];
+              if (i < cols - 1) {
+                moveR = grid[i + 1][j];
+                if (j < rows - 1) {
+                  belowR = grid[i + 1][j + 1];
+                }
+                if (j > 0) {
+                  aboveR = grid[i + 1][j - 1];
+                }
               }
-            }
-            if (i < cols - 1) {
-              moveR = grid[i + 1][j];
-              if (j < rows - 1) {
-                belowR = grid[i + 1][j + 1];
-              }
-              if (j > 0) {
-                aboveR = grid[i + 1][j - 1];
-              }
-            }
-            //SAND
-            if (isSand.includes(state)) { // Movimento de sólidos (areia)
-              if (notTangible.includes(below) && j < rows - 1) {
-                possibleMoves.push([i, j + 1]);
-              }
-              if (notTangible.includes(belowR)) {
-                possibleMoves.push([i + 1, j + 1]);
-              }
-              if (notTangible.includes(belowL)) {
-                possibleMoves.push([i - 1, j + 1]);
-              }
-              if (possibleMoves.length === 0) {
-                if (isWater.includes(below) && j < rows - 1) {
+              //SAND
+              if (isSand.includes(state)) { // Movimento de sólidos (areia)
+                if (notTangible.includes(below) && j < rows - 1) {
                   possibleMoves.push([i, j + 1]);
                 }
-                if (isWater.includes(belowR)) {
+                if (notTangible.includes(belowR)) {
                   possibleMoves.push([i + 1, j + 1]);
                 }
-                if (isWater.includes(belowL)) {
+                if (notTangible.includes(belowL)) {
                   possibleMoves.push([i - 1, j + 1]);
                 }
-                if (possibleMoves.length === 0){
-                  nextGrid[i][j].isUpdated = true;
-                }
-                else {
-                  let sinkChance = 20; //chance in % of particle sinking
-                  if (int(random(1, 101)) <= sinkChance){
-                    let rn = Math.floor(Math.random() * possibleMoves.length);
-                    let [newI, newJ] = possibleMoves[rn]; //water pixel
-                    x = nextGrid[newI][newJ]; //x = water
-                    nextGrid[newI][newJ] = nextGrid[i][j]; //water pixel turned to sand
-                    nextGrid[i][j] = x;
-                    nextGrid[newI][newJ].isUpdated = true;
-                    nextGrid[i][j].isUpdated = true;
+                if (possibleMoves.length === 0) {
+                  if (isWater.includes(below) && j < rows - 1) {
+                    possibleMoves.push([i, j + 1]);
                   }
-                  else{
-                    nextGrid[i][j].isUpdated = true;
+                  if (isWater.includes(belowR)) {
+                    possibleMoves.push([i + 1, j + 1]);
                   }
-                }
-              } else {
-                let rn = Math.floor(Math.random() * possibleMoves.length);
-                let [newI, newJ] = possibleMoves[rn];
-                nextGrid[newI][newJ] = nextGrid[i][j];
-                nextGrid[newI][newJ].isUpdated = true;
-                nextGrid[i][j] = 0; // Limpa a célula original
-              }
-            } 
-            //LIQUID
-            else if (isWater.includes(state)) { // Movimento de líquidos (água)
-              if (notTangible.includes(below) && j < rows - 1) {
-                possibleMoves.push([i, j + 1]);
-              }
-              if (notTangible.includes(belowR)) {
-                possibleMoves.push([i + 1, j + 1]);
-              }
-              if (notTangible.includes(belowL)) {
-                possibleMoves.push([i - 1, j + 1]);
-              }
-              if (notTangible.includes(moveR)) {
-                possibleMoves.push([i + 1, j]);
-              }
-              if (notTangible.includes(moveL)) {
-                possibleMoves.push([i - 1, j]);
-              }
-  
-              // Verifica se possibleMoves contém qualquer um dos movimentos 'below'
-              const containsBelow = possibleMoves.some(move => 
-                (move[0] === i && move[1] === j + 1) || 
-                (move[0] === i + 1 && move[1] === j + 1) || 
-                (move[0] === i - 1 && move[1] === j + 1)
-              );
-  
-              if (containsBelow) {
-                // Remove movimentos laterais de possibleMoves
-                possibleMoves = possibleMoves.filter(move => 
-                  !(move[0] === i + 1 && move[1] === j) && 
-                  !(move[0] === i - 1 && move[1] === j)
-                );
-              }
-  
-              if (possibleMoves.length === 0) {
-                nextGrid[i][j].isUpdated = true;
-              } else {
-                let rn = Math.floor(Math.random() * possibleMoves.length);
-                let [newI, newJ] = possibleMoves[rn];
-                nextGrid[newI][newJ] = nextGrid[i][j];
-                nextGrid[newI][newJ].isUpdated = true;
-                nextGrid[i][j] = 0; // Limpa a célula original
-              }
-            }
-            //ACID
-            else if (isAcid.includes(state)) { // Movimento de líquidos
-              if (notTangible.includes(below) && j < rows - 1) {
-                possibleMoves.push([i, j + 1]);
-              } else if (isFragile.includes(below) && j < rows - 1) {
-                possibleCorosion.push([i, j + 1]);
-              }
-              if (notTangible.includes(belowR)) {
-                possibleMoves.push([i + 1, j + 1]);
-              }
-              if (notTangible.includes(belowL)) {
-                possibleMoves.push([i - 1, j + 1]);
-              }
-              if (notTangible.includes(moveR)) {
-                possibleMoves.push([i + 1, j]);
-              } else if (isFragile.includes(moveR)) {
-                possibleCorosion.push([i + 1, j]);
-              }
-              if (notTangible.includes(moveL)) {
-                possibleMoves.push([i - 1, j]);
-              } else if (isFragile.includes(moveL)) {
-                possibleCorosion.push([i - 1, j]);
-              }
-              if (isFragile.includes(above) && j > 0){
-                possibleCorosion.push([i, j - 1]);
-              }
-  
-              // Verifica se possibleMoves contém qualquer um dos movimentos 'below'
-              const containsBelow = possibleMoves.some(move => 
-                (move[0] === i && move[1] === j + 1) || 
-                (move[0] === i + 1 && move[1] === j + 1) || 
-                (move[0] === i - 1 && move[1] === j + 1)
-              );
+                  if (isWater.includes(belowL)) {
+                    possibleMoves.push([i - 1, j + 1]);
+                  }
+                  if (possibleMoves.length === 0){
+                    isUpdated.add(`${i},${j}`);
+                    isInactive.add(`${i},${j}`);
+                  }
+                  else {
+                    let sinkChance = 20; //chance in % of particle sinking
+                    if (int(random(1, 101)) <= sinkChance){
+                      let rn = Math.floor(Math.random() * possibleMoves.length);
+                      let [newI, newJ] = possibleMoves[rn]; //water pixel
+                      x = nextGrid[newI][newJ]; //x = water
+                      nextGrid[newI][newJ] = nextGrid[i][j]; //water pixel turned to sand
+                      nextGrid[i][j] = x;
+                      isUpdated.add(`${newI},${newJ}`);
+                      isUpdated.add(`${i},${j}`);
 
-              const fragileBelow = possibleCorosion.some(move => 
-                (move[0] === i && move[1] === j + 1)
-              );
-  
-              if (containsBelow) {
-                // Remove movimentos laterais de possibleMoves
-                possibleMoves = possibleMoves.filter(move => 
-                  !(move[0] === i + 1 && move[1] === j) && 
-                  !(move[0] === i - 1 && move[1] === j)
+                      //REMOVER VIZINHOS DE isInactive
+                      isInactive.delete(`${i},${j}`);
+                      isInactive.delete(`${i + 1},${j}`);
+                      isInactive.delete(`${i - 1},${j}`);
+                      isInactive.delete(`${i},${j + 1}`);
+                      isInactive.delete(`${i},${j - 1}`);
+                      isInactive.delete(`${i + 1},${j + 1}`);
+                      isInactive.delete(`${i - 1},${j - 1}`);
+                      isInactive.delete(`${i + 1},${j - 1}`);
+                      isInactive.delete(`${i - 1},${j + 1}`);
+
+                      isInactive.delete(`${newI},${newJ}`);
+                      isInactive.delete(`${newI + 1},${newJ}`);
+                      isInactive.delete(`${newI - 1},${newJ}`);
+                      isInactive.delete(`${newI},${newJ + 1}`);
+                      isInactive.delete(`${newI},${newJ - 1}`);
+                      isInactive.delete(`${newI + 1},${newJ + 1}`);
+                      isInactive.delete(`${newI - 1},${newJ - 1}`);
+                      isInactive.delete(`${newI + 1},${newJ - 1}`);
+                      isInactive.delete(`${newI - 1},${newJ + 1}`);
+                     
+                    }
+                    else{
+                      isUpdated.add(`${i},${j}`);
+                      isInactive.add(`${i},${j}`);
+                    }
+                  }
+                } else {
+                  let rn = Math.floor(Math.random() * possibleMoves.length);
+                  let [newI, newJ] = possibleMoves[rn];
+                  nextGrid[newI][newJ] = nextGrid[i][j];
+                  isUpdated.add(`${newI},${newJ}`);
+                  nextGrid[i][j] = 0; // Limpa a célula original
+
+                  //REMOVER VIZINHOS DE isInactive
+                  isInactive.delete(`${i},${j}`);
+                  isInactive.delete(`${i + 1},${j}`);
+                  isInactive.delete(`${i - 1},${j}`);
+                  isInactive.delete(`${i},${j + 1}`);
+                  isInactive.delete(`${i},${j - 1}`);
+                  isInactive.delete(`${i + 1},${j + 1}`);
+                  isInactive.delete(`${i - 1},${j - 1}`);
+                  isInactive.delete(`${i + 1},${j - 1}`);
+                  isInactive.delete(`${i - 1},${j + 1}`);
+
+                  isInactive.delete(`${newI},${newJ}`);
+                  isInactive.delete(`${newI + 1},${newJ}`);
+                  isInactive.delete(`${newI - 1},${newJ}`);
+                  isInactive.delete(`${newI},${newJ + 1}`);
+                  isInactive.delete(`${newI},${newJ - 1}`);
+                  isInactive.delete(`${newI + 1},${newJ + 1}`);
+                  isInactive.delete(`${newI - 1},${newJ - 1}`);
+                  isInactive.delete(`${newI + 1},${newJ - 1}`);
+                  isInactive.delete(`${newI - 1},${newJ + 1}`);
+                }
+              } 
+              //LIQUID
+              else if (isWater.includes(state)) { // Movimento de líquidos (água)
+                if (notTangible.includes(below) && j < rows - 1) {
+                  possibleMoves.push([i, j + 1]);
+                }
+                if (notTangible.includes(belowR)) {
+                  possibleMoves.push([i + 1, j + 1]);
+                }
+                if (notTangible.includes(belowL)) {
+                  possibleMoves.push([i - 1, j + 1]);
+                }
+                if (notTangible.includes(moveR)) {
+                  possibleMoves.push([i + 1, j]);
+                }
+                if (notTangible.includes(moveL)) {
+                  possibleMoves.push([i - 1, j]);
+                }
+    
+                // Verifica se possibleMoves contém qualquer um dos movimentos 'below'
+                const containsBelow = possibleMoves.some(move => 
+                  (move[0] === i && move[1] === j + 1) || 
+                  (move[0] === i + 1 && move[1] === j + 1) || 
+                  (move[0] === i - 1 && move[1] === j + 1)
                 );
+    
+                if (containsBelow) {
+                  // Remove movimentos laterais de possibleMoves
+                  possibleMoves = possibleMoves.filter(move => 
+                    !(move[0] === i + 1 && move[1] === j) && 
+                    !(move[0] === i - 1 && move[1] === j)
+                  );
+                }
+    
+                if (possibleMoves.length === 0) {
+                  isUpdated.add(`${i},${j}`);
+                } else {
+                  let rn = Math.floor(Math.random() * possibleMoves.length);
+                  let [newI, newJ] = possibleMoves[rn];
+                  nextGrid[newI][newJ] = nextGrid[i][j];
+                  isUpdated.add(`${newI},${newJ}`);
+                  nextGrid[i][j] = 0; // Limpa a célula original
+                }
               }
-              if (fragileBelow) {
-                // Remove movimentos laterais de possibleMoves
-                possibleCorosion = possibleCorosion.filter(move => 
-                  !(move[0] === i + 1 && move[1] === j) && 
-                  !(move[0] === i - 1 && move[1] === j) &&
-                  !(move[0] === i && move[1] === j - 1)
+              //ACID
+              else if (isAcid.includes(state)) { // Movimento de líquidos
+                if (notTangible.includes(below) && j < rows - 1) {
+                  possibleMoves.push([i, j + 1]);
+                } else if (isFragile.includes(below) && j < rows - 1) {
+                  possibleCorosion.push([i, j + 1]);
+                }
+                if (notTangible.includes(belowR)) {
+                  possibleMoves.push([i + 1, j + 1]);
+                }
+                if (notTangible.includes(belowL)) {
+                  possibleMoves.push([i - 1, j + 1]);
+                }
+                if (notTangible.includes(moveR)) {
+                  possibleMoves.push([i + 1, j]);
+                } else if (isFragile.includes(moveR)) {
+                  possibleCorosion.push([i + 1, j]);
+                }
+                if (notTangible.includes(moveL)) {
+                  possibleMoves.push([i - 1, j]);
+                } else if (isFragile.includes(moveL)) {
+                  possibleCorosion.push([i - 1, j]);
+                }
+                if (isFragile.includes(above) && j > 0){
+                  possibleCorosion.push([i, j - 1]);
+                }
+    
+                // Verifica se possibleMoves contém qualquer um dos movimentos 'below'
+                const containsBelow = possibleMoves.some(move => 
+                  (move[0] === i && move[1] === j + 1) || 
+                  (move[0] === i + 1 && move[1] === j + 1) || 
+                  (move[0] === i - 1 && move[1] === j + 1)
                 );
-                possibleMoves == [];
-              }
   
-              if (possibleMoves.length === 0 && possibleCorosion.length === 0) {
-                nextGrid[i][j].isUpdated = true;
-              } else {
-                if (possibleMoves.length !== 0 && possibleCorosion.length !== 0){
-                  if (int(random(1, 3)) == 1){ //movimento normal
+                const fragileBelow = possibleCorosion.some(move => 
+                  (move[0] === i && move[1] === j + 1)
+                );
+    
+                if (containsBelow) {
+                  // Remove movimentos laterais de possibleMoves
+                  possibleMoves = possibleMoves.filter(move => 
+                    !(move[0] === i + 1 && move[1] === j) && 
+                    !(move[0] === i - 1 && move[1] === j)
+                  );
+                }
+                if (fragileBelow) {
+                  // Remove movimentos laterais de possibleMoves
+                  possibleCorosion = possibleCorosion.filter(move => 
+                    !(move[0] === i + 1 && move[1] === j) && 
+                    !(move[0] === i - 1 && move[1] === j) &&
+                    !(move[0] === i && move[1] === j - 1)
+                  );
+                  possibleMoves == [];
+                }
+    
+                if (possibleMoves.length === 0 && possibleCorosion.length === 0) {
+                  isUpdated.add(`${i},${j}`);
+                } else {
+                  if (possibleMoves.length !== 0 && possibleCorosion.length !== 0){
+                    if (int(random(1, 3)) == 1){ //movimento normal
+                      let rn = Math.floor(Math.random() * possibleMoves.length);
+                      let [newI, newJ] = possibleMoves[rn];
+                      nextGrid[newI][newJ] = nextGrid[i][j];
+                      isUpdated.add(`${newI},${newJ}`);
+                      nextGrid[i][j] = 0; // Limpa a célula original
+                    }
+                    else{ //movimento para consumir pixel
+                      let rn = Math.floor(Math.random() * possibleCorosion.length);
+                      let [newI, newJ] = possibleCorosion[rn];
+                      nextGrid[newI][newJ] = 0;
+                      nextGrid[i][j] = 0;
+                    }
+                  }
+                  else if (possibleMoves.length !== 0){
                     let rn = Math.floor(Math.random() * possibleMoves.length);
                     let [newI, newJ] = possibleMoves[rn];
                     nextGrid[newI][newJ] = nextGrid[i][j];
-                    nextGrid[newI][newJ].isUpdated = true;
+                    isUpdated.add(`${newI},${newJ}`);
                     nextGrid[i][j] = 0; // Limpa a célula original
                   }
-                  else{ //movimento para consumir pixel
+                  else if (possibleCorosion.length !== 0){
                     let rn = Math.floor(Math.random() * possibleCorosion.length);
                     let [newI, newJ] = possibleCorosion[rn];
                     nextGrid[newI][newJ] = 0;
                     nextGrid[i][j] = 0;
                   }
                 }
-                else if (possibleMoves.length !== 0){
-                  let rn = Math.floor(Math.random() * possibleMoves.length);
-                  let [newI, newJ] = possibleMoves[rn];
-                  nextGrid[newI][newJ] = nextGrid[i][j];
-                  nextGrid[newI][newJ].isUpdated = true;
-                  nextGrid[i][j] = 0; // Limpa a célula original
+              }
+              //GASES
+              else if (isGas.includes(state)){
+                let stayChance = 50; //chance in % of particle to not move
+                if (int(random(1, 101)) <= stayChance){
+                  isUpdated.add(`${i},${j}`);
                 }
-                else if (possibleCorosion.length !== 0){
-                  let rn = Math.floor(Math.random() * possibleCorosion.length);
-                  let [newI, newJ] = possibleCorosion[rn];
-                  nextGrid[newI][newJ] = 0;
+                else{
+                  if (notTangible.includes(above) && j > 0) {
+                    possibleMoves.push([i, j - 1]);
+                  }
+                  if (notTangible.includes(aboveR)) {
+                    possibleMoves.push([i + 1, j - 1]);
+                  }
+                  if (notTangible.includes(aboveL)) {
+                    possibleMoves.push([i - 1, j - 1]);
+                  }
+                  if (notTangible.includes(moveR)) {
+                    possibleMoves.push([i + 1, j]);
+                  }
+                  if (notTangible.includes(moveL)) {
+                    possibleMoves.push([i - 1, j]);
+                  }
+                  if (notTangible.includes(below) && j < cols - 1) {
+                    possibleMoves.push([i, j + 1]);
+                  }
+  
+  
+                  // Limite o número de movimentos permitidos por quadro
+                  if (possibleMoves.length > 0) {
+                    let rn = Math.floor(Math.random() * possibleMoves.length);
+                    let [newI, newJ] = possibleMoves[rn];
+                    nextGrid[newI][newJ] = nextGrid[i][j];
+                    isUpdated.add(`${newI},${newJ}`);
+                    nextGrid[i][j] = 0; // Limpa a célula original
+                  } else {
+                    isUpdated.add(`${i},${j}`);
+                  }
+                }
+              }
+              //FIRE
+              else if (isFire.includes(state)) {
+                let dieChance = 5; // chance in % of particle to not move
+                let stayChance = 20; // chance in % of particle to not move
+                if (int(random(1, 101)) <= dieChance) {
                   nextGrid[i][j] = 0;
                 }
-              }
-            }
-            //GASES
-            else if (isGas.includes(state)){
-              let stayChance = 50; //chance in % of particle to not move
-              if (int(random(1, 101)) <= stayChance){
-                isUpdated.add(`${i},${j}`);
-              }
-              else{
-                if (notTangible.includes(above) && j > 0) {
-                  possibleMoves.push([i, j - 1]);
+                else{
+                  // Verifica as células vizinhas que podem pegar fogo
+                if (isFlamable.some(flammable => flammable.slice(0, -1).includes(moveL))) {
+                  possibleFire.push([i - 1, j]); // Célula à esquerda
                 }
-                if (notTangible.includes(aboveR)) {
-                  possibleMoves.push([i + 1, j - 1]);
+                if (isFlamable.some(flammable => flammable.slice(0, -1).includes(moveR))) {
+                  possibleFire.push([i + 1, j]); // Célula à direita
                 }
-                if (notTangible.includes(aboveL)) {
-                  possibleMoves.push([i - 1, j - 1]);
+                if (isFlamable.some(flammable => flammable.slice(0, -1).includes(above))) {
+                  possibleFire.push([i, j - 1]); // Célula acima
                 }
-                if (notTangible.includes(moveR)) {
-                  possibleMoves.push([i + 1, j]);
+                if (isFlamable.some(flammable => flammable.slice(0, -1).includes(below))) {
+                  possibleFire.push([i, j + 1]); // Célula abaixo
                 }
-                if (notTangible.includes(moveL)) {
-                  possibleMoves.push([i - 1, j]);
-                }
-                if (notTangible.includes(below) && j < cols - 1) {
-                  possibleMoves.push([i, j + 1]);
-                }
-
-
-                // Limite o número de movimentos permitidos por quadro
-                if (possibleMoves.length > 0) {
-                  let rn = Math.floor(Math.random() * possibleMoves.length);
-                  let [newI, newJ] = possibleMoves[rn];
-                  nextGrid[newI][newJ] = nextGrid[i][j];
-                  isUpdated.add(`${newI},${newJ}`);
-                  nextGrid[i][j] = 0; // Limpa a célula original
-                } else {
-                  isUpdated.add(`${i},${j}`);
-                }
-              }
-            }
-            //FIRE
-            else if (isFire.includes(state)) {
-              let dieChance = 5; // chance in % of particle to not move
-              let stayChance = 20; // chance in % of particle to not move
-              if (int(random(1, 101)) <= dieChance) {
-                nextGrid[i][j] = 0;
-              }
-              else{
-                // Verifica as células vizinhas que podem pegar fogo
-              if (isFlamable.some(flammable => flammable.slice(0, -1).includes(moveL))) {
-                possibleFire.push([i - 1, j]); // Célula à esquerda
-              }
-              if (isFlamable.some(flammable => flammable.slice(0, -1).includes(moveR))) {
-                possibleFire.push([i + 1, j]); // Célula à direita
-              }
-              if (isFlamable.some(flammable => flammable.slice(0, -1).includes(above))) {
-                possibleFire.push([i, j - 1]); // Célula acima
-              }
-              if (isFlamable.some(flammable => flammable.slice(0, -1).includes(below))) {
-                possibleFire.push([i, j + 1]); // Célula abaixo
-              }
-            
-              // Propagação do fogo
-              if (possibleFire.length > 0) {
-                possibleFire.forEach(([newI, newJ]) => {
-                  let flameChance = 0;
-            
-                  isFlamable.forEach(flammable => {
-                    if (flammable.slice(0, -1).includes(nextGrid[newI][newJ])) {
-                      flameChance = flammable[flammable.length - 1]; // Chance do material
+              
+                // Propagação do fogo
+                if (possibleFire.length > 0) {
+                  possibleFire.forEach(([newI, newJ]) => {
+                    let flameChance = 0;
+              
+                    isFlamable.forEach(flammable => {
+                      if (flammable.slice(0, -1).includes(nextGrid[newI][newJ])) {
+                        flameChance = flammable[flammable.length - 1]; // Chance do material
+                      }
+                    });
+              
+                    // Checar se o fogo deve se propagar
+                    if (int(random(1, 101)) <= flameChance && isFuelStatic.includes(nextGrid[newI][newJ])) {
+                      nextGrid[newI][newJ] = random(isBurning); // Propaga o fogo
+                      isUpdated.add(`${newI},${newJ}`);
+                    }
+                    else if (int(random(1, 101)) <= flameChance && isFuelLiquid.includes(nextGrid[newI][newJ])) {
+                      nextGrid[newI][newJ] = random(isFire); // no lugar de isFire colocar a particula FuelLiquid
+                      isUpdated.add(`${newI},${newJ}`);
+                    }
+                    else if (int(random(1, 101)) <= flameChance) {
+                      nextGrid[newI][newJ] = random(isFire); // Propaga o fogo
+                      isUpdated.add(`${newI},${newJ}`);
                     }
                   });
-            
-                  // Checar se o fogo deve se propagar
-                  if (int(random(1, 101)) <= flameChance && isFuelStatic.includes(nextGrid[newI][newJ])) {
-                    nextGrid[newI][newJ] = random(isBurning); // Propaga o fogo
-                    isUpdated.add(`${newI},${newJ}`);
-                  }
-                  else if (int(random(1, 101)) <= flameChance && isFuelLiquid.includes(nextGrid[newI][newJ])) {
-                    nextGrid[newI][newJ] = random(isFire); // no lugar de isFire colocar a particula FuelLiquid
-                    isUpdated.add(`${newI},${newJ}`);
-                  }
-                  else if (int(random(1, 101)) <= flameChance) {
-                    nextGrid[newI][newJ] = random(isFire); // Propaga o fogo
-                    isUpdated.add(`${newI},${newJ}`);
-                  }
-                });
-              }
-              } if (int(random(1, 101)) <= stayChance) {
-                isUpdated.add(`${i},${j}`);
-              } else {
-                // Adiciona possíveis movimentos
-                if (notTangible.includes(above) && j > 0) {
-                  possibleMoves.push([i, j - 1]);
                 }
-                if (notTangible.includes(aboveR)) {
-                  possibleMoves.push([i + 1, j - 1]);
-                }
-                if (notTangible.includes(aboveL)) {
-                  possibleMoves.push([i - 1, j - 1]);
-                }
-                if (notTangible.includes(moveR)) {
-                  possibleMoves.push([i + 1, j]);
-                }
-                if (notTangible.includes(moveL)) {
-                  possibleMoves.push([i - 1, j]);
-                }
-            
-                // Limite o número de movimentos permitidos por quadro
-                if (possibleMoves.length > 0) {
-                  let rn = Math.floor(Math.random() * possibleMoves.length);
-                  let [newI, newJ] = possibleMoves[rn];
-                  nextGrid[newI][newJ] = nextGrid[i][j];
-                  isUpdated.add(`${newI},${newJ}`);
-                  nextGrid[i][j] = 0; // Limpa a célula original
-                } else {
-                  isUpdated.add(`${i},${j}`);
-                }
-              }
-              isUpdated.add(`${i},${j}`); // Adiciona a célula atual
-            }
-            //BURNING PARTICLE
-            else if (isBurning.includes(state)){
-              let dieChance = 33; // chance in % of particle to die
-              if (int(random(1, 101)) <= dieChance) {
-                nextGrid[i][j] = random(isFire);
-              }
-              else{
-                if (notTangible.includes(above) && j > 0) {
-                  possibleMoves.push([i, j - 1]);
-                }
-                if (notTangible.includes(aboveR)) {
-                  possibleMoves.push([i + 1, j - 1]);
-                }
-                if (notTangible.includes(aboveL)) {
-                  possibleMoves.push([i - 1, j - 1]);
-                }
-                if (notTangible.includes(moveR)) {
-                  possibleMoves.push([i + 1, j]);
-                }
-                if (notTangible.includes(moveL)) {
-                  possibleMoves.push([i - 1, j]);
-                }
-                if (notTangible.includes(below) && j < cols - 1){
-                  possibleMoves.push([i, j + 1]);
-                }
-                if (notTangible.includes(belowR) && j < cols - 1){
-                  possibleMoves.push([i + 1, j + 1]);
-                }
-                if (notTangible.includes(belowL) && j < cols - 1){
-                  possibleMoves.push([i - 1, j + 1]);
-                }
-                if (possibleMoves.length > 0) {
-                  let rn = Math.floor(Math.random() * possibleMoves.length);
-                  let [newI, newJ] = possibleMoves[rn];
-                  nextGrid[newI][newJ] = random(isFire);
-                  isUpdated.add(`${newI},${newJ}`);
+                } if (int(random(1, 101)) <= stayChance) {
                   isUpdated.add(`${i},${j}`);
                 } else {
-                  isUpdated.add(`${i},${j}`);
+                  // Adiciona possíveis movimentos
+                  if (notTangible.includes(above) && j > 0) {
+                    possibleMoves.push([i, j - 1]);
+                  }
+                  if (notTangible.includes(aboveR)) {
+                    possibleMoves.push([i + 1, j - 1]);
+                  }
+                  if (notTangible.includes(aboveL)) {
+                    possibleMoves.push([i - 1, j - 1]);
+                  }
+                  if (notTangible.includes(moveR)) {
+                    possibleMoves.push([i + 1, j]);
+                  }
+                  if (notTangible.includes(moveL)) {
+                    possibleMoves.push([i - 1, j]);
+                  }
+              
+                  // Limite o número de movimentos permitidos por quadro
+                  if (possibleMoves.length > 0) {
+                    let rn = Math.floor(Math.random() * possibleMoves.length);
+                    let [newI, newJ] = possibleMoves[rn];
+                    nextGrid[newI][newJ] = nextGrid[i][j];
+                    isUpdated.add(`${newI},${newJ}`);
+                    nextGrid[i][j] = 0; // Limpa a célula original
+                  } else {
+                    isUpdated.add(`${i},${j}`);
+                  }
+                }
+                isUpdated.add(`${i},${j}`); // Adiciona a célula atual
+              }
+              //BURNING PARTICLE
+              else if (isBurning.includes(state)){
+                let dieChance = 33; // chance in % of particle to die
+                if (int(random(1, 101)) <= dieChance) {
+                  nextGrid[i][j] = random(isFire);
+                }
+                else{
+                  if (notTangible.includes(above) && j > 0) {
+                    possibleMoves.push([i, j - 1]);
+                  }
+                  if (notTangible.includes(aboveR)) {
+                    possibleMoves.push([i + 1, j - 1]);
+                  }
+                  if (notTangible.includes(aboveL)) {
+                    possibleMoves.push([i - 1, j - 1]);
+                  }
+                  if (notTangible.includes(moveR)) {
+                    possibleMoves.push([i + 1, j]);
+                  }
+                  if (notTangible.includes(moveL)) {
+                    possibleMoves.push([i - 1, j]);
+                  }
+                  if (notTangible.includes(below) && j < cols - 1){
+                    possibleMoves.push([i, j + 1]);
+                  }
+                  if (notTangible.includes(belowR) && j < cols - 1){
+                    possibleMoves.push([i + 1, j + 1]);
+                  }
+                  if (notTangible.includes(belowL) && j < cols - 1){
+                    possibleMoves.push([i - 1, j + 1]);
+                  }
+                  if (possibleMoves.length > 0) {
+                    let rn = Math.floor(Math.random() * possibleMoves.length);
+                    let [newI, newJ] = possibleMoves[rn];
+                    nextGrid[newI][newJ] = random(isFire);
+                    isUpdated.add(`${newI},${newJ}`);
+                    isUpdated.add(`${i},${j}`);
+                  } else {
+                    isUpdated.add(`${i},${j}`);
+                  }
                 }
               }
             }
-            
-          }
-          else{ //caso a celula deva ser ignorada
-            isUpdated.add(`${i},${j}`);
+            else{ //caso a celula deva ser ignorada
+              isUpdated.add(`${i},${j}`);
+            }
           }
         }
       }
