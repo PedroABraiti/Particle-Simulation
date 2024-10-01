@@ -1,4 +1,4 @@
-*Este projeto esta sendo reescrito do 0 por questões de otimização e mudança de objetivo, porem permanecerá sendo desenvolvido em JavaScript até uqe haja alguma necessidade de mudar isso também*
+*Este projeto esta sendo reescrito do 0 por questões de otimização e mudança de objetivo, porem permanecerá sendo desenvolvido em JavaScript até que haja alguma necessidade de mudar isso também*
 
 # Particle-Simulation
 
