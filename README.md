@@ -16,6 +16,9 @@ Uma simulação interativa de partículas em 2D, demonstrando movimento, colisõ
 
 ➥ *Visualização em Tempo Real: Mostre a evolução da simulação em tempo real, permitindo que os usuários observem comportamentos dinâmicos.*
 
+![image_particles](https://github.com/user-attachments/assets/62d10677-bcfb-4995-a148-032fde8b5407)
+
+
 __________________________________________________________________________________________________________________________________________________
 
 **TECNOLOGIAS UTILIZADAS:**
