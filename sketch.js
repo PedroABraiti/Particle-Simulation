@@ -16,7 +16,7 @@ function make2DArray(cols, rows) {
 let grid;
 let w = 4; //pixel size
 let width = 400*w;
-let hight = 200*w;
+let height = 200*w;
 let cols, rows;
 
 let hueValue;
@@ -57,7 +57,7 @@ let size = 1;
 let mouseHolded = false;
 
 function setup() {
-  createCanvas(width, hight);
+  createCanvas(width, height);
   colorMode(HSB, 360, 255, 255); // hue, saturation, brightness
   cols = width / w;
   rows = height / w;
